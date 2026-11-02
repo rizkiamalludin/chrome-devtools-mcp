@@ -1,27 +1,38 @@
 # Chrome DevTools MCP
 
-Konfigurasi untuk menjalankan [Chrome DevTools MCP](https://github.com/ChromeDevTools/chrome-devtools-mcp) melalui klien yang mendukung MCP, seperti Claude Code.
+Repository ini menyimpan konfigurasi MCP lokal dan panduan untuk memakai browser cloud dari Claude Web.
 
-## Isi repository
+## Pilihan penggunaan
 
-- `.mcp.json` — konfigurasi server MCP menggunakan `npx`.
-  
-## Prasyarat
+### 1. Claude Web — browser online
 
-- Node.js dan npm terpasang.
-- Google Chrome terpasang.
-- Klien MCP yang mendukung konfigurasi `.mcp.json`.
+Ikuti [panduan Claude Web](./CLAUDE-WEB.md). Panduan tersebut memakai **Browserbase Remote MCP** agar Claude Web dapat mengakses browser yang berjalan di cloud melalui Custom Connector.
 
-## Konfigurasi
+Alurnya: Claude Web → Custom Connector → Browserbase Remote MCP → browser cloud.
 
-File `.mcp.json` menjalankan paket resmi `chrome-devtools-mcp` melalui:
+**Catatan:** ini bukan menjalankan paket Chrome DevTools MCP lokal di server. Browser berjalan di cloud dan memiliki sesi terpisah dari Chrome di laptopmu.
+
+### 2. Klien MCP lokal — Chrome DevTools MCP
+
+File `.mcp.json` menjalankan paket resmi [Chrome DevTools MCP](https://github.com/ChromeDevTools/chrome-devtools-mcp) melalui:
 
 ```bash
 npx -y chrome-devtools-mcp@latest
 ```
 
-Saat pertama dijalankan, npm dapat mengunduh paket yang diperlukan. Ikuti instruksi klien MCP yang kamu gunakan untuk mengaktifkan server.
+Prasyarat:
+- Node.js dan npm.
+- Google Chrome.
+- Klien MCP yang mendukung konfigurasi lokal, misalnya Claude Code.
 
-## Catatan
+File ini bukan konfigurasi untuk Claude Web. Mengunggahnya ke GitHub tidak otomatis memasang konektor di akun Claude.
 
-Repository ini hanya menyediakan konfigurasi. Ia tidak otomatis menghubungkan ChatGPT dengan Claude, dan tidak menjalankan browser secara mandiri.
+## Keamanan
+
+Jangan pernah menyimpan API key, token, atau kredensial pribadi di repository publik. Ikuti panduan keamanan pada [CLAUDE-WEB.md](./CLAUDE-WEB.md).
+
+## Dokumentasi
+
+- [Panduan menghubungkan Claude Web ke browser cloud](./CLAUDE-WEB.md)
+- [Chrome DevTools MCP resmi](https://github.com/ChromeDevTools/chrome-devtools-mcp)
+- [Browserbase MCP](https://www.browserbase.com/mcp)
