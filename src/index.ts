@@ -196,12 +196,12 @@ function createMcpServer(): McpServer {
         const headings = await page.locator("h1, h2, h3").evaluateAll((elements) =>
           elements.slice(0, 30).map((element) => ({
             level: element.tagName.toLowerCase(),
-            text: (element.textContent ?? "").trim().replace(/\\s+/g, " "),
+            text: (element.textContent ?? "").trim().replace(/\s+/g, " "),
           })).filter((item) => item.text.length > 0),
         );
         const links = await page.locator("a[href]").evaluateAll((elements) =>
           elements.slice(0, 40).map((element) => ({
-            text: (element.textContent ?? element.getAttribute("aria-label") ?? "").trim().replace(/\\s+/g, " "),
+            text: (element.textContent ?? element.getAttribute("aria-label") ?? "").trim().replace(/\s+/g, " "),
             href: (element as HTMLAnchorElement).href,
           })).filter((item) => item.text.length > 0),
         );
