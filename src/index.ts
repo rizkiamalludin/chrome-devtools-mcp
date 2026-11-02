@@ -44,16 +44,19 @@ function getSession(sessionId?: string): { id: string; session: BrowserSession }
 function isPrivateIPv4(address: string): boolean {
   const parts = address.split(".").map(Number);
   if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
-  const [a, b, c] = parts;
-  return (
-    a === 0 || a === 10 || a === 127 || a >= 224 ||
-    (a === 100 && b >= 64 && b <= 127) ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && (b === 0 || b === 168)) ||
-    (a === 198 && (b === 18 || b === 19 || b === 51)) ||
-    (a === 203 && b === 0 && c === 113)
-  );
+  const value = parts.reduce((result, part) => (result * 256) + part, 0);
+  const inRange = (base: number[], prefix: number) => {
+    const network = base.reduce((result, part) => (result * 256) + part, 0);
+    const mask = (0xffffffff << (32 - prefix)) >>> 0;
+    return ((value >>> 0) & mask) === ((network >>> 0) & mask);
+  };
+  return [
+    [[0, 0, 0, 0], 8], [[10, 0, 0, 0], 8], [[100, 64, 0, 0], 10],
+    [[127, 0, 0, 0], 8], [[169, 254, 0, 0], 16], [[172, 16, 0, 0], 12],
+    [[192, 0, 0, 0], 24], [[192, 0, 2, 0], 24], [[192, 88, 99, 0], 24],
+    [[192, 168, 0, 0], 16], [[198, 18, 0, 0], 15], [[198, 51, 100, 0], 24],
+    [[203, 0, 113, 0], 24], [[224, 0, 0, 0], 4], [[240, 0, 0, 0], 4],
+  ].some(([base, prefix]) => inRange(base as number[], prefix as number));
 }
 
 function isPrivateOrReservedAddress(address: string): boolean {
@@ -64,7 +67,7 @@ function isPrivateOrReservedAddress(address: string): boolean {
     if (normalized === "::" || normalized === "::1" || normalized.startsWith("fc") ||
         normalized.startsWith("fd") || normalized.startsWith("fe8") ||
         normalized.startsWith("fe9") || normalized.startsWith("fea") ||
-        normalized.startsWith("feb") || normalized.startsWith("::ffff:")) return true;
+        normalized.startsWith("feb") || normalized.startsWith("::ffff:") || normalized.startsWith("3fff:")) return true;
     const first = Number.parseInt(normalized.split(":")[0] || "0", 16);
     return first < 0x2000 || first > 0x3fff || normalized.startsWith("2001:db8:");
   }
@@ -100,11 +103,9 @@ async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
 
 async function guardRoute(route: Route): Promise<void> {
   const requestUrl = route.request().url();
-  if (/^(data|blob|about):/i.test(requestUrl)) {
-    await route.continue();
-    return;
-  }
   try {
+    // Every network request, including redirects and subresources, must pass
+    // the same public-hostname and DNS-address checks.
     await assertPublicHttpUrl(requestUrl);
     await route.continue();
   } catch {
@@ -140,7 +141,7 @@ function createMcpServer(): McpServer {
           throw new Error("Browserbase connected but did not provide a browser context.");
         }
         const page = context.pages()[0] ?? await context.newPage();
-        await page.route("**/*", guardRoute);
+        await context.route("**/*", guardRoute);
 
         const id = randomUUID();
         sessions.set(id, {
