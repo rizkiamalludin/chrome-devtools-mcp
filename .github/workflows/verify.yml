@@ -32,7 +32,7 @@ jobs:
           elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ] && [ "${HEAD_REPO}" = "${GITHUB_REPOSITORY}" ]; then
             target_branch="${HEAD_REF}"
           fi
-          if [ -n "${target_branch}" ] && ! git diff --quiet -- package-lock.json; then
+          if [ -n "${target_branch}" ] && [ -n "$(git status --porcelain -- package-lock.json)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add package-lock.json
