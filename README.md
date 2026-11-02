@@ -87,7 +87,7 @@ Never put Browserbase credentials in the connector URL. Never paste secrets into
 
 - The remote endpoint requires bearer authentication.
 - Browserbase API keys and CDP connection URLs are never returned by tools.
-- Local/private IP destinations and common internal hostnames are blocked; DNS results are checked before navigation and requests.
+- Local/private and special-use IP ranges plus common internal hostnames are checked for each intercepted request. DNS rebinding remains a time-of-check/time-of-use risk; production use requires host-level outbound network restrictions.
 - Clicks are limited to visible links; form submission and arbitrary code execution are not exposed.
 - Keep the remote service private and review browser actions.
 
