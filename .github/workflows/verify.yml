@@ -1,7 +1,7 @@
 name: Build and typecheck
 
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
@@ -22,31 +22,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Generate and save npm lockfile
-        env:
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          npm install --package-lock-only --ignore-scripts
-          target_branch=""
-          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF_NAME}" = "feature/own-browser-mcp-server" ]; then
-            target_branch="${GITHUB_REF_NAME}"
-          elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ] && [ "${HEAD_REPO}" = "${GITHUB_REPOSITORY}" ]; then
-            target_branch="${HEAD_REF}"
-          fi
-          if [ -n "${target_branch}" ] && [ -n "$(git status --porcelain -- package-lock.json)" ]; then
-            lock_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/package-lock.json?ref=${target_branch}" --jq .sha)"
-            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/package-lock.json" \
-              -f message="Update reproducible npm lockfile" \
-              -f branch="${target_branch}" \
-              -f sha="${lock_sha}" \
-              -f content="$(base64 -w0 package-lock.json)"
-          fi
       - run: npm ci
-      - name: Report dependency vulnerabilities
-        run: |
-          npm audit --json > npm-audit.json || true
-          node -e "const a=require('./npm-audit.json'); console.log(JSON.stringify(a.vulnerabilities ?? {}, null, 2))"
+      - run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npm run build
