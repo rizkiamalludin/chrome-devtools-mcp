@@ -1,0 +1,28 @@
+name: Build and typecheck
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+      - feature/own-browser-mcp-server
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run typecheck
+      - run: npm run build

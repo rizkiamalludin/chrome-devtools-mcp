@@ -1,8 +1,12 @@
 {
   "mcpServers": {
+    "rizki-browser": {
+      "command": "node",
+      "args": ["./dist/index.js"]
+    },
     "chrome-devtools": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest"]
+      "args": ["-y", "chrome-devtools-mcp@1.12.0"]
     }
   }
 }

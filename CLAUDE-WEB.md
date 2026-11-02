@@ -1,54 +1,51 @@
-# Menghubungkan Claude Web ke browser online
+# Menghubungkan Claude Web ke Rizki Browser MCP
 
-Panduan ini memakai **Browserbase MCP Server** sebagai browser cloud yang sudah menyediakan endpoint Remote MCP. Ini adalah jalur paling sederhana untuk Claude Web; bukan menjalankan paket lokal `chrome-devtools-mcp` di server.
+Dokumen ini menjelaskan cara menghubungkan Claude Web ke **server MCP milik repository ini** setelah server dipasang pada host Node.js yang mendukung koneksi HTTPS persisten.
 
-## Gambaran
+## Arsitektur
 
-Claude Web → Custom Connector → Browserbase Remote MCP → browser Chrome di cloud.
+Claude Web → Custom Remote MCP Connector → Rizki Browser MCP → Playwright → Browserbase Cloud Browser.
 
-Browser berjalan di infrastruktur Browserbase, bukan di laptop pengguna.
+Server ini berbeda dari Browserbase Remote MCP bawaan. Browserbase menyediakan infrastruktur browser; kode MCP dan daftar alat pada proyek ini kita kelola sendiri.
 
-## Prasyarat
+## Sebelum mulai
 
-- Akun Claude yang mendukung Custom Connector.
-- Akun Browserbase dan API key Browserbase.
-- Periksa ketentuan usia, privasi, dan batas penggunaan layanan sebelum membuat akun atau mengaktifkannya.
+- Server sudah dibangun dan dijalankan pada host Node.js persisten.
+- Host menyediakan URL HTTPS yang dapat dijangkau Claude Web.
+- Environment server sudah diatur: `TRANSPORT=http`, `BROWSERBASE_API_KEY`, `BROWSERBASE_PROJECT_ID`, dan `MCP_AUTH_TOKEN`.
+- Jangan menaruh API key Browserbase atau bearer token di GitHub, screenshot, atau chat.
 
-Browserbase menyediakan paket gratis dengan kuota terbatas. Kuota dan harga dapat berubah; periksa halaman harga resminya sebelum digunakan.
+## Pengaturan konektor
 
-## Langkah koneksi di Claude Web
+1. Buka Claude Web → Settings/Customize → Connectors.
+2. Pilih **Add custom connector**.
+3. Name: `Rizki Browser MCP`.
+4. URL: `https://DOMAIN-HOST-MILIKMU/mcp`.
+5. Pilih opsi autentikasi tanpa OAuth jika tersedia bagian request headers.
+6. Tambahkan fixed request header:
 
-1. Masuk ke Claude Web.
-2. Buka **Customize → Connectors**.
-3. Pilih **Add** atau **Add custom connector**.
-4. Beri nama, misalnya `Browser Cloud`.
-5. Masukkan URL Remote MCP berikut, ganti placeholder dengan API key milik sendiri:
+   ```http
+   Authorization: Bearer YOUR_MCP_AUTH_TOKEN
+   ```
 
-   `https://mcp.browserbase.com/mcp?browserbaseApiKey=YOUR_BROWSERBASE_API_KEY`
+7. Pilih transport **Streamable HTTP**.
+8. Simpan dan aktifkan konektor.
 
-6. Lanjutkan proses deteksi autentikasi dan simpan konektor.
-7. Aktifkan konektor pada percakapan melalui menu **+ → Connectors**.
-8. Uji dengan meminta Claude membuka halaman publik yang tidak memerlukan login, lalu merangkum judul dan isi utamanya.
+Jangan gunakan URL Browserbase yang memuat API key. Browserbase API key hanya disimpan pada environment server.
 
-## Keamanan
+## Uji aman
 
-- **Jangan** commit API key ke GitHub.
-- Jangan kirim API key melalui chat, screenshot, atau issue publik.
-- Simpan API key hanya di pengaturan konektor privat. Jika pernah terlanjur terekspos, cabut/ganti key dari dashboard penyedia.
-- Mulai dari situs publik. Jangan gunakan browser cloud untuk akun pribadi, data sensitif, pembayaran, atau tindakan yang tidak kamu pahami.
-- Tinjau setiap permintaan tindakan Claude sebelum menyetujuinya.
-- Browser cloud memiliki sesi dan penyimpanan tersendiri; jangan menganggapnya memakai login atau profil Chrome laptopmu.
+Minta Claude:
+- memulai browser;
+- membuka `https://example.com`;
+- membaca URL, judul, heading, dan tautan;
+- mengambil screenshot;
+- menutup sesi.
 
-## Apa yang ada di repository ini?
+Gunakan situs publik. Jangan login, memasukkan kredensial, mengirim formulir, melakukan pembayaran, atau mengakses data pribadi.
 
-- `.mcp.json`: konfigurasi **lokal** untuk klien MCP yang dapat menjalankan proses Node.js.
-- Dokumen ini: panduan menghubungkan Claude Web ke **Remote MCP** Browserbase.
+## Catatan hosting
 
-Keduanya berbeda. Mengunggah `.mcp.json` ke GitHub tidak otomatis memasang konektor pada Claude Web.
+Endpoint remote menggunakan state browser dalam memori proses. Karena itu, gunakan host Node.js persisten yang menjaga satu proses tetap hidup. Jangan deploy versi awal ini ke fungsi serverless yang dapat berpindah instance atau mati di antara pemanggilan alat.
 
-## Referensi resmi
-
-- Browserbase MCP: https://www.browserbase.com/mcp
-- Browserbase pricing: https://www.browserbase.com/pricing
-- Claude custom connectors: https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities
-- Claude Remote MCP setup: https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp
+Lihat [README.md](./README.md) untuk menjalankan server dan [SECURITY.md](./SECURITY.md) untuk batasan keamanan.
