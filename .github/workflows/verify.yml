@@ -20,15 +20,24 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Generate npm lockfile and commit it on branch pushes
+      - name: Generate npm lockfile and commit it to the development branch
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           npm install --package-lock-only --ignore-scripts
-          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF_NAME}" = "feature/own-browser-mcp-server" ] && ! git diff --quiet -- package-lock.json; then
+          target_branch=""
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF_NAME}" = "feature/own-browser-mcp-server" ]; then
+            target_branch="${GITHUB_REF_NAME}"
+          elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ] && [ "${HEAD_REPO}" = "${GITHUB_REPOSITORY}" ]; then
+            target_branch="${HEAD_REF}"
+          fi
+          if [ -n "${target_branch}" ] && ! git diff --quiet -- package-lock.json; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add package-lock.json
             git commit -m "Add reproducible npm lockfile"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
+            git push origin "HEAD:${target_branch}"
           fi
       - run: npm ci
       - run: npm run typecheck
