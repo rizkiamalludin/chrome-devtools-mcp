@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -40,5 +42,9 @@ jobs:
             git push origin "HEAD:${target_branch}"
           fi
       - run: npm ci
+      - name: Report dependency vulnerabilities
+        run: |
+          npm audit --json > npm-audit.json || true
+          node -e "const a=require('./npm-audit.json'); console.log(JSON.stringify(a.vulnerabilities ?? {}, null, 2))"
       - run: npm run typecheck
       - run: npm run build
