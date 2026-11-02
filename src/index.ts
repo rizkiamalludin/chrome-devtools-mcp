@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { isIP } from "node:net";
+import { lookup } from "node:dns/promises";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -13,7 +14,6 @@ import { z } from "zod";
 type BrowserSession = {
   browser: Browser;
   page: Page;
-  browserbaseSessionId: string;
 };
 
 const sessions = new Map<string, BrowserSession>();
@@ -38,7 +38,6 @@ function getSession(sessionId?: string): { id: string; session: BrowserSession }
   if (!id) throw new Error("No browser session. Call browser_start first.");
   const session = sessions.get(id);
   if (!session) throw new Error("Browser session not found or already closed. Call browser_start again.");
-  if (session.page.isClosed()) throw new Error("The active page is closed. Start a new browser session.");
   return { id, session };
 }
 
@@ -72,7 +71,7 @@ function isPrivateOrReservedAddress(address: string): boolean {
   return true;
 }
 
-function assertPublicHttpUrl(rawUrl: string): URL {
+function parsePublicHttpUrl(rawUrl: string): URL {
   const url = new URL(rawUrl);
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Only public HTTP and HTTPS websites are allowed.");
@@ -90,6 +89,15 @@ function assertPublicHttpUrl(rawUrl: string): URL {
   return url;
 }
 
+async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
+  const url = parsePublicHttpUrl(rawUrl);
+  const addresses = await lookup(url.hostname, { all: true, verbatim: true });
+  if (addresses.length === 0 || addresses.some(({ address }) => isPrivateOrReservedAddress(address))) {
+    throw new Error("The website resolves to a local, private, or reserved network address and is blocked.");
+  }
+  return url;
+}
+
 async function guardRoute(route: Route): Promise<void> {
   const requestUrl = route.request().url();
   if (/^(data|blob|about):/i.test(requestUrl)) {
@@ -97,7 +105,7 @@ async function guardRoute(route: Route): Promise<void> {
     return;
   }
   try {
-    assertPublicHttpUrl(requestUrl);
+    await assertPublicHttpUrl(requestUrl);
     await route.continue();
   } catch {
     await route.abort("blockedbyclient");
@@ -138,7 +146,6 @@ function createMcpServer(): McpServer {
         sessions.set(id, {
           browser,
           page,
-          browserbaseSessionId: remoteSession.id,
         });
         activeSessionId = id;
         return textResult({
@@ -158,7 +165,7 @@ function createMcpServer(): McpServer {
     { url: z.string().url(), sessionId: z.string().optional() },
     async ({ url, sessionId }) => {
       try {
-        const safeUrl = assertPublicHttpUrl(url);
+        const safeUrl = await assertPublicHttpUrl(url);
         const { session } = getSession(sessionId);
         const response = await session.page.goto(safeUrl.toString(), {
           waitUntil: "domcontentloaded",
@@ -225,7 +232,7 @@ function createMcpServer(): McpServer {
         if (!(await link.isVisible())) throw new Error("The matching link is not visible.");
         const href = await link.getAttribute("href");
         if (!href) throw new Error("The matching link has no href destination.");
-        assertPublicHttpUrl(new URL(href, page.url()).toString());
+        await assertPublicHttpUrl(new URL(href, page.url()).toString());
 
         const beforeUrl = page.url();
         await link.click({ timeout: 10000 });
